@@ -1,35 +1,54 @@
-#include "fsl_debug_console.h"
-#include "pin_mux.h"
-#include "clock_config.h"
-#include "board.h"
+/*
+ * Watchdog implementation
+ *
+ * Sergio Borrayo Anzaldo
+ * Sonny Ceja Celis
+ */
+
+//Headers internos//
+#include <stdio.h>
+#include "gpio.h"
+#include "wdog.h"
+#include "rgb.h"
+
+//Headers de drivers
 #include "fsl_wdog.h"
 #include "fsl_rcm.h"
 
-#define WDOG_WCT_INSTRUCITON_COUNT (256U)
+//Variables del wdog
+WDOG_Type *wdog_base = WDOG;
+RCM_Type *rcm_base   = RCM;
 
-static void WaitWctClose(WDOG_Type *base)
-{
-    /* Accessing register by bus clock */
-    for (uint32_t i = 0; i < WDOG_WCT_INSTRUCITON_COUNT; i++)
-    {
-        (void)base->RSTCNT;
-    }
-}
-
+// Valor del timer //
 static inline uint32_t GetTimerOutputValue(WDOG_Type *base)
 {
     return (uint32_t)((((uint32_t)base->TMROUTH) << 16U) | (base->TMROUTL));
 }
 
-GPIO_INIT();
-
 int main(void) {
 
-	uint8_t boton = 0;
+	GPIO_init();
+
+	uint8_t input_port_a = false;
+    uint16_t wdog_reset_count = 0;
+    uint8_t contador = 0;
+    wdog_config_t config;
+
+    if (!(RCM_GetPreviousResetSources(rcm_base) & kRCM_SourceWdog))
+        {
+            WDOG_ClearResetCount(wdog_base);
+        }
+    wdog_reset_count = WDOG_GetResetCount(wdog_base);
 
 	for(;;)
 	{
 		input_port_a = !GPIO_PinRead(GPIOA, 4);
+
+		if(false != input_port_a)
+		{
+			contador = +1;
+		}
+
 		if(input_port_a)
 		{
 			while(1);
